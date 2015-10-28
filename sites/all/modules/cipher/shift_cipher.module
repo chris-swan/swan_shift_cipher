@@ -1,0 +1,131 @@
+<?php
+
+function shift_cipher_menu() {
+  $items = array();
+  $items['shift_cipher'] = array(
+    'title' => 'Shift Cipher',
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => TRUE,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('shift_cipher_form'),
+  );
+
+  $items['cipher_results'] = array(
+    'title' => 'Results',
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+    'page callback' => 'cipher_results',
+  );
+
+  return $items;
+}
+
+function shift_cipher_form() {
+  $form = array();
+  $form['shift_value'] = array(
+    '#title' => 'Shift Value:',
+    '#type' => 'textfield',
+    '#description' => t('Enter the number of spaces to shift.'),
+    '#element_validate' => array('element_validate_positive'),
+    '#required' => TRUE,
+  );
+
+  $form['direction'] = array(
+    '#title' => 'Shift Direction:',
+    '#type' => 'textfield',
+    '#description' => t('Enter the direction to shift, "left" or "right".'),
+    '#element_validate' => array('element_validate_direction'),
+    '#required' => TRUE,
+  );
+
+  $form['user_phrase'] = array(
+    '#title' => 'Phrase:',
+    '#type' => 'textfield',
+    '#description' => t('Enter your phrase.'),
+    '#element_validate' => array('element_validate_special_characters'),
+    '#required' => TRUE,
+  ) ;
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Encode it!',
+  );
+
+  return $form;
+}
+
+//Must enter a positive value between 1-26 (places within the alphabet)
+function element_validate_positive($element) {
+	$user_number = $element['#value'];
+	if($user_number < 1 || $user_number > 26) {
+		form_error($element, t('you must enter a number greater than zero & less than 27'));
+	}
+}
+//Ensure they enter "right" or "left".
+function element_validate_direction($element) {
+	
+	$directions = array('right', 'left');
+	$user_direction = strtolower($element['#value']);
+	if(!in_array($user_direction, $directions)) {
+		form_error($element, t('you must enter "right" or "left"'));
+	}
+}
+//Ensure no one is trying any tricks:
+function element_validate_special_characters($element) {
+	$user_phrase = strtolower($element['#value']);
+	$user_words = str_split($user_phrase);
+    $accepted = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h','i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '!', '.', ',', '?', ';', ':', ' '];
+	foreach($user_words as $input)
+		if (!in_array($input, $accepted)) {
+			form_error($element, t('the character: ' . $input . ' is not allowed, please try again.'));
+		}
+}
+
+function shift_cipher_form_submit($form, &$form_state) {
+  $shift_value = $form_state['values']['shift_value'];
+  $direction = $form_state['values']['direction'];
+  $user_phrase = $form_state['values']['user_phrase'];
+  $result = '';
+  $exploded_phrase = explode(" ", $user_phrase);
+  $shifted_letters = array();
+  $shifted_phrase = array();
+  $letters_array = ['a' , 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'a' , 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+  $accepted_characters = ['!', '.', ',', '?', ';', ':'];
+  
+//Break down each phrase into individual words(or accepted punctuation to be ignored),
+//loop through each word and shift it to its new order, then return it to its array as a word.
+
+  foreach($exploded_phrase as $word) {
+    $split_word = str_split($word);
+    foreach($split_word as $letter) {
+       if(in_array($letter, $accepted_characters)) {
+         array_push($shifted_letters, $letter);
+       } else {
+        $letter_key = array_search($letter, $letters_array);
+        if($direction === 'right') {
+         $key = $letter_key + $shift_value;
+        } else {
+           $key = $letter_key - $shift_value;
+            if ($key < 0) {
+             $key += 26;
+            } 
+          }
+        array_push($shifted_letters, $letters_array[$key]);
+      }
+    }
+    //push shifted word to the phrase array. Reset the letters array to begin looping through the next word.
+    $shifted_word = implode('', $shifted_letters);
+    array_push($shifted_phrase, $shifted_word);
+    $shifted_letters = array();
+  }
+
+//return the phrase and restoring the spaces:
+  $result = implode(' ', $shifted_phrase);
+  $_SESSION['cipher_output'] = $result;
+  $form_state['redirect'] = 'cipher_results';
+}
+
+function cipher_results() {
+  $shifted_phrase = $_SESSION['cipher_output'];
+  return 'The shifted phrase is: " ' . $shifted_phrase . ' "';
+}

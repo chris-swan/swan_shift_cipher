@@ -1,0 +1,5 @@
+name = Shift Cipher
+description = Creates an encoded word by shifting the placement of the letters
+package = Shift Cipher
+core = 7.x
+files[] = shift_cipher.module
