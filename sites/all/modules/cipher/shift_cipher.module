@@ -44,7 +44,7 @@ function shift_cipher_form() {
     '#description' => t('Enter your phrase.'),
     '#element_validate' => array('element_validate_special_characters'),
     '#required' => TRUE,
-  ) ;
+  );
 
   $form['submit'] = array(
     '#type' => 'submit',
